@@ -22,6 +22,7 @@ Terminal assistant with:
 - `obsidian_loader.py`
 - `vector_store.py`
 - `code_summarizer.py`
+- `source_reader.py`
 - `utils.py`
 - `config.json`
 - `requirements.txt`
@@ -114,6 +115,8 @@ python cli.py --status
 - `/modo`
 - `/smart caminho`
 - `/resumir caminho`
+- `/ler caminho`
+- `/read path`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -130,3 +133,4 @@ python cli.py --status
 - `auto_reindex_on_start` can rebuild the index automatically on startup.
 - `smoke_test.py` validates startup without entering chat.
 - `/smart` and `/resumir` generate a compact heuristic summary for code files, inspired by RTK's `smart` command.
+- `/ler` and `/read` provide compact file reading with optional comment stripping, line windows, and line numbers.

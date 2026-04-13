@@ -14,6 +14,7 @@ from database import ChatDatabase
 from embeddings import EmbeddingManager
 from obsidian_loader import ObsidianLoader
 from search import SearchEngine
+from source_reader import ReadOptions, SourceReader
 from utils import AppTimer, ensure_directory, log, normalize_text
 from vector_store import VectorStore
 
@@ -77,6 +78,7 @@ class AssistantApp:
         self.search = SearchEngine(self.db, self.vector_store, self.embeddings, self.config)
         self.ai = LocalAssistant(self.config)
         self.summarizer = CodeSummarizer()
+        self.reader = SourceReader()
         self.documents = []
         self.chunks = []
         self.vault_file_count = 0
@@ -499,6 +501,44 @@ class AssistantApp:
                 print(self.summarizer.format_summary(target))
             except Exception as exc:
                 log(f"Failed to summarize file: {exc}")
+            return
+        if command_name in {"/ler", "/read"}:
+            parts = command.split(maxsplit=4)
+            if len(parts) < 2:
+                log("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
+                return
+            target = Path(parts[1].strip().strip('"'))
+            options = ReadOptions()
+            extra = parts[2:]
+            idx = 0
+            while idx < len(extra):
+                token = extra[idx].lower()
+                if token in {"raw", "none", "minimal", "aggressive"}:
+                    options.level = token
+                elif token in {"tail", "last"} and idx + 1 < len(extra):
+                    try:
+                        options.tail_lines = int(extra[idx + 1])
+                        idx += 1
+                    except ValueError:
+                        log("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
+                        return
+                elif token in {"numbers", "-n", "line_numbers"}:
+                    options.line_numbers = True
+                else:
+                    try:
+                        value = int(token)
+                        if options.tail_lines is None:
+                            options.max_lines = value
+                        else:
+                            options.tail_lines = value
+                    except ValueError:
+                        log(f"Unknown option: {token}")
+                        return
+                idx += 1
+            try:
+                print(self.reader.read_path(target, options))
+            except Exception as exc:
+                log(f"Failed to read file: {exc}")
             return
         if command_name == "/recarregar":
             self.reload_vault(reindex=False)
