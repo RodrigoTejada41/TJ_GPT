@@ -4,6 +4,7 @@ import json
 import argparse
 import sys
 import threading
+import re
 from pathlib import Path
 
 import requests
@@ -494,24 +495,24 @@ class AssistantApp:
             )
             return
         if command_name in {"/smart", "/resumir"}:
-            parts = command.split(maxsplit=1)
-            if len(parts) < 2:
+            args = self._split_command_args(command, command_name)
+            if not args:
                 log("Usage: /smart caminho-do-arquivo")
                 return
-            target = Path(parts[1].strip().strip('"'))
+            target = Path(args[0])
             try:
                 print(self.summarizer.format_summary(target))
             except Exception as exc:
                 log(f"Failed to summarize file: {exc}")
             return
         if command_name in {"/ler", "/read"}:
-            parts = command.split(maxsplit=4)
-            if len(parts) < 2:
+            args = self._split_command_args(command, command_name)
+            if not args:
                 log("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
                 return
-            target = Path(parts[1].strip().strip('"'))
+            target = Path(args[0])
             options = ReadOptions()
-            extra = parts[2:]
+            extra = args[1:]
             idx = 0
             while idx < len(extra):
                 token = extra[idx].lower()
@@ -543,11 +544,11 @@ class AssistantApp:
                 log(f"Failed to read file: {exc}")
             return
         if command_name in {"/buscar", "/grep"}:
-            parts = command.split(maxsplit=1)
-            if len(parts) < 2:
+            args = self._split_command_args(command, command_name)
+            if not args:
                 log("Usage: /buscar termo")
                 return
-            query = parts[1].strip().strip('"')
+            query = " ".join(args)
             try:
                 vault_path = Path(self.config["vault_path"]).expanduser()
                 result = self.vault_search.search(vault_path, query, SearchOptions())
@@ -602,6 +603,17 @@ class AssistantApp:
             log(f"Config updated: {key}={value}")
             return
         log(f"Unknown command: {command}")
+
+    def _split_command_args(self, command: str, command_name: str) -> list[str]:
+        raw_args = command[len(command_name):].strip()
+        if not raw_args:
+            return []
+        tokens = []
+        for match in re.finditer(r'"([^"]*)"|(\S+)', raw_args):
+            token = match.group(1) if match.group(1) is not None else match.group(2)
+            if token:
+                tokens.append(token)
+        return tokens
 
 
 def main() -> None:
