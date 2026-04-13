@@ -124,6 +124,7 @@ python cli.py --status
 - `/sum comando`
 - `/summary comando`
 - `/resumo comando`
+- `/terminal sum|read|search|smart ...`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -143,3 +144,4 @@ python cli.py --status
 - `/ler` and `/read` provide compact file reading with optional comment stripping, line windows, and line numbers.
 - `/buscar` and `/grep` search the Obsidian vault and group matches by file, inspired by RTK's compact grep output.
 - `/sum`, `/summary`, and `/resumo` run a command and print a compact heuristic summary of its output, inspired by RTK's `summary` command.
+- `/terminal` is a convenience wrapper that routes to summary, compact read, vault search, or code summary in one entry point.

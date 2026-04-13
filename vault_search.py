@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 from pathlib import Path
-from typing import Iterable
 
 from obsidian_loader import ObsidianLoader
 
@@ -119,4 +118,3 @@ class VaultSearcher:
         if len(parts) <= 3:
             return path
         return str(Path(parts[0]) / "..." / Path(*parts[-2:]))
-

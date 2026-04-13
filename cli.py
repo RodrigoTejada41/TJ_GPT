@@ -568,6 +568,67 @@ class AssistantApp:
             except Exception as exc:
                 log(f"Failed to summarize command: {exc}")
             return
+        if command_name in {"/terminal", "/term"}:
+            args = self._split_command_args(command, command_name)
+            if not args:
+                log("Usage: /terminal sum|read|search|smart ...")
+                return
+            subcommand = args[0].lower()
+            payload = args[1:]
+            try:
+                if subcommand in {"sum", "summary", "resumo"}:
+                    command_text = " ".join(payload).strip()
+                    if not command_text:
+                        log("Usage: /terminal sum comando")
+                        return
+                    print(self.command_summarizer.format_summary(command_text))
+                    return
+                if subcommand in {"read", "ler"}:
+                    if not payload:
+                        log("Usage: /terminal read caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
+                        return
+                    options = ReadOptions()
+                    target = Path(payload[0])
+                    extra = payload[1:]
+                    idx = 0
+                    while idx < len(extra):
+                        token = extra[idx].lower()
+                        if token in {"raw", "none", "minimal", "aggressive"}:
+                            options.level = token
+                        elif token in {"tail", "last"} and idx + 1 < len(extra):
+                            options.tail_lines = int(extra[idx + 1])
+                            idx += 1
+                        elif token in {"numbers", "-n", "line_numbers"}:
+                            options.line_numbers = True
+                        else:
+                            value = int(token)
+                            if options.tail_lines is None:
+                                options.max_lines = value
+                            else:
+                                options.tail_lines = value
+                        idx += 1
+                    print(self.reader.read_path(target, options))
+                    return
+                if subcommand in {"search", "grep", "buscar"}:
+                    query = " ".join(payload).strip()
+                    if not query:
+                        log("Usage: /terminal search termo")
+                        return
+                    vault_path = Path(self.config["vault_path"]).expanduser()
+                    result = self.vault_search.search(vault_path, query, SearchOptions())
+                    print(result)
+                    return
+                if subcommand in {"smart", "resumir"}:
+                    if not payload:
+                        log("Usage: /terminal smart caminho-do-arquivo")
+                        return
+                    print(self.summarizer.format_summary(Path(payload[0])))
+                    return
+            except Exception as exc:
+                log(f"Terminal command failed: {exc}")
+                return
+            log("Usage: /terminal sum|read|search|smart ...")
+            return
         if command_name == "/recarregar":
             self.reload_vault(reindex=False)
             log(f"Reloaded vault: {len(self.documents)} files, {len(self.chunks)} chunks")
