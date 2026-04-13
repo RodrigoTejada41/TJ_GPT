@@ -5,6 +5,7 @@ import argparse
 import sys
 import threading
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -28,6 +29,7 @@ DATA_DIR = ROOT / "data"
 DB_PATH = DATA_DIR / "assistant.sqlite3"
 INDEX_PATH = DATA_DIR / "vector_store"
 REINDEX_CHECKPOINT_PATH = DATA_DIR / "reindex_checkpoint.json"
+TERMINAL_HISTORY_PATH = DATA_DIR / "terminal_history.jsonl"
 DEFAULT_CONFIG = {
     "modo_llm": "ollama",
     "modo_embedding": "ollama",
@@ -665,14 +667,34 @@ class AssistantApp:
             if not command_text:
                 print(self.format_terminal_help())
                 return True
-            print(self.command_summarizer.format_summary(command_text))
+            result = self.command_summarizer.run(command_text)
+            print(result.summary)
+            print(f"[command: {result.command} | exit: {result.exit_code} | lines: {result.lines}]")
+            self._append_terminal_history(
+                action="sum",
+                command=result.command,
+                exit_code=result.exit_code,
+                lines=result.lines,
+            )
             return True
         if subcommand in {"read", "ler"}:
             if not payload:
                 print(self.format_terminal_help())
                 return True
             target, options = self._parse_read_args(payload)
-            print(self.reader.read_path(target, options))
+            output = self.reader.read_path(target, options)
+            print(output)
+            self._append_terminal_history(
+                action="read",
+                target=str(target),
+                options={
+                    "level": options.level,
+                    "max_lines": options.max_lines,
+                    "tail_lines": options.tail_lines,
+                    "line_numbers": options.line_numbers,
+                },
+                lines=len(output.splitlines()) if output else 0,
+            )
             return True
         if subcommand in {"search", "grep", "buscar"}:
             query = " ".join(payload).strip()
@@ -682,12 +704,28 @@ class AssistantApp:
             vault_path = Path(self.config["vault_path"]).expanduser()
             result = self.vault_search.search(vault_path, query, SearchOptions())
             print(result)
+            self._append_terminal_history(
+                action="search",
+                query=query,
+                vault_path=str(vault_path),
+                lines=len(result.splitlines()) if result else 0,
+            )
             return True
         if subcommand in {"smart", "resumir"}:
             if not payload:
                 print(self.format_terminal_help())
                 return True
-            print(self.summarizer.format_summary(Path(payload[0])))
+            target = Path(payload[0])
+            summary = self.summarizer.format_summary(target)
+            print(summary)
+            self._append_terminal_history(
+                action="smart",
+                target=str(target),
+                lines=len(summary.splitlines()),
+            )
+            return True
+        if subcommand in {"history", "historico"}:
+            print(self.format_terminal_history())
             return True
         return False
 
@@ -724,7 +762,52 @@ class AssistantApp:
                 if raw:
                     self._run_terminal_subcommand("smart", self._split_quoted_args(raw))
                 continue
+            if choice in {"5", "history", "historico"}:
+                self._run_terminal_subcommand("history", [])
+                continue
             print("Invalid option. Type h for help or 0 to exit.")
+
+    def _append_terminal_history(self, **entry: object) -> None:
+        payload = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            **entry,
+        }
+        ensure_directory(DATA_DIR)
+        with TERMINAL_HISTORY_PATH.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+    def _load_terminal_history(self, limit: int = 20) -> list[dict]:
+        if not TERMINAL_HISTORY_PATH.exists():
+            return []
+        rows: list[dict] = []
+        with TERMINAL_HISTORY_PATH.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except Exception:
+                    continue
+        if limit <= 0:
+            return rows
+        return rows[-limit:]
+
+    def format_terminal_history(self, limit: int = 20) -> str:
+        rows = self._load_terminal_history(limit=limit)
+        if not rows:
+            return "No terminal history yet."
+        lines = [f"Terminal history (last {len(rows)})", ""]
+        for row in reversed(rows):
+            ts = str(row.get("ts", "-"))
+            action = str(row.get("action", "-"))
+            summary_parts = []
+            for key in ("command", "target", "query", "exit_code", "lines"):
+                if key in row:
+                    summary_parts.append(f"{key}={row[key]}")
+            details = " | ".join(summary_parts) if summary_parts else "-"
+            lines.append(f"- {ts} | {action} | {details}")
+        return "\n".join(lines)
 
     def format_terminal_help(self) -> str:
         return "\n".join(
@@ -738,12 +821,14 @@ class AssistantApp:
                 "  /terminal read <path> [raw|minimal|aggressive] [max_lines|tail N] [numbers]",
                 "  /terminal search <term>",
                 "  /terminal smart <path>",
+                "  /terminal history",
                 "",
                 "Examples:",
                 "  /terminal sum echo hello world",
                 "  /terminal read \"README.md\" minimal 12 numbers",
                 "  /terminal search backup branch",
                 "  /terminal smart cli.py",
+                "  /terminal history",
             ]
         )
 
@@ -756,6 +841,7 @@ class AssistantApp:
                 "2) read    - compact file reader",
                 "3) search  - vault text search",
                 "4) smart   - code file summary",
+                "5) history - recent terminal actions",
                 "h) help",
                 "0) exit",
             ]

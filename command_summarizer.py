@@ -88,7 +88,18 @@ class CommandSummarizer:
         cmd_lower = command.lower()
         out_lower = output.lower()
 
-        if "test" in cmd_lower or ("passed" in out_lower and "failed" in out_lower):
+        test_patterns = (
+            r"\bpytest\b",
+            r"\bvitest\b",
+            r"\brspec\b",
+            r"\bgo\s+test\b",
+            r"\bcargo\s+test\b",
+            r"\bnpm\s+(run\s+)?test\b",
+            r"\bpnpm\s+(run\s+)?test\b",
+            r"\byarn\s+test\b",
+        )
+        is_test_command = any(re.search(pattern, cmd_lower) for pattern in test_patterns)
+        if is_test_command or ("passed" in out_lower and "failed" in out_lower):
             return "test"
         if "build" in cmd_lower or "compile" in cmd_lower or "compiling" in out_lower:
             return "build"

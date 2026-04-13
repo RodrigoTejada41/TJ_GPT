@@ -127,6 +127,7 @@ python cli.py --status
 - `/terminal sum|read|search|smart ...`
 - `/terminal help`
 - `/terminal menu`
+- `/terminal history`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -149,3 +150,4 @@ python cli.py --status
 - `/terminal` is a convenience wrapper that routes to summary, compact read, vault search, or code summary in one entry point.
 - `/terminal help` prints a short command menu with examples.
 - `/terminal menu` opens an interactive numeric menu for quick terminal-assistant actions.
+- `/terminal history` shows the most recent terminal-assistant actions persisted in `data/terminal_history.jsonl`.
