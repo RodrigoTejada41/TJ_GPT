@@ -527,12 +527,12 @@ class AssistantApp:
         if command_name in {"/buscar", "/grep"}:
             args = self._split_command_args(command, command_name)
             if not args:
-                log("Usage: /buscar termo")
+                log("Usage: /buscar termo [regex] [max N] [per_file N] [ctx N]")
                 return
-            query = " ".join(args)
             try:
+                query, options = self._parse_search_args(args)
                 vault_path = Path(self.config["vault_path"]).expanduser()
-                result = self.vault_search.search(vault_path, query, SearchOptions())
+                result = self.vault_search.search(vault_path, query, options)
                 print(result)
             except Exception as exc:
                 log(f"Failed to search vault: {exc}")
@@ -661,6 +661,55 @@ class AssistantApp:
             idx += 1
         return target, options
 
+    def _parse_search_args(self, args: list[str]) -> tuple[str, SearchOptions]:
+        if not args:
+            raise ValueError("Usage: /terminal search <term> [regex] [max N] [per_file N] [ctx N]")
+
+        options = SearchOptions()
+        tokens = list(args)
+
+        def parse_positive_int(raw: str, option_name: str) -> int:
+            try:
+                value = int(raw)
+            except ValueError as exc:
+                raise ValueError(f"Invalid {option_name}: {raw}") from exc
+            if value <= 0:
+                raise ValueError(f"{option_name} must be > 0")
+            return value
+
+        # Parse options from right-to-left, preserving free-form query text at the start.
+        while tokens:
+            tail = tokens[-1].lower()
+            if tail in {"regex", "re"}:
+                options.regex = True
+                tokens.pop()
+                continue
+            if tail in {"literal", "plain"}:
+                options.regex = False
+                tokens.pop()
+                continue
+            if len(tokens) >= 2:
+                key = tokens[-2].lower()
+                value = tokens[-1]
+                if key in {"max", "max_results"}:
+                    options.max_results = parse_positive_int(value, "max_results")
+                    tokens = tokens[:-2]
+                    continue
+                if key in {"per_file", "perfile", "per"}:
+                    options.per_file = parse_positive_int(value, "per_file")
+                    tokens = tokens[:-2]
+                    continue
+                if key in {"ctx", "context", "context_chars"}:
+                    options.context_chars = parse_positive_int(value, "context_chars")
+                    tokens = tokens[:-2]
+                    continue
+            break
+
+        query = " ".join(tokens).strip()
+        if not query:
+            raise ValueError("Usage: /terminal search <term> [regex] [max N] [per_file N] [ctx N]")
+        return query, options
+
     def _run_terminal_subcommand(self, subcommand: str, payload: list[str]) -> bool:
         if subcommand in {"sum", "summary", "resumo"}:
             command_text = " ".join(payload).strip()
@@ -697,16 +746,22 @@ class AssistantApp:
             )
             return True
         if subcommand in {"search", "grep", "buscar"}:
-            query = " ".join(payload).strip()
-            if not query:
+            if not payload:
                 print(self.format_terminal_help())
                 return True
+            query, options = self._parse_search_args(payload)
             vault_path = Path(self.config["vault_path"]).expanduser()
-            result = self.vault_search.search(vault_path, query, SearchOptions())
+            result = self.vault_search.search(vault_path, query, options)
             print(result)
             self._append_terminal_history(
                 action="search",
                 query=query,
+                options={
+                    "regex": options.regex,
+                    "max_results": options.max_results,
+                    "per_file": options.per_file,
+                    "context_chars": options.context_chars,
+                },
                 vault_path=str(vault_path),
                 lines=len(result.splitlines()) if result else 0,
             )
@@ -819,7 +874,7 @@ class AssistantApp:
                 "  /terminal menu",
                 "  /terminal sum <command>",
                 "  /terminal read <path> [raw|minimal|aggressive] [max_lines|tail N] [numbers]",
-                "  /terminal search <term>",
+                "  /terminal search <term> [regex] [max N] [per_file N] [ctx N]",
                 "  /terminal smart <path>",
                 "  /terminal history",
                 "",
@@ -827,6 +882,7 @@ class AssistantApp:
                 "  /terminal sum echo hello world",
                 "  /terminal read \"README.md\" minimal 12 numbers",
                 "  /terminal search backup branch",
+                "  /terminal search \"backup branch\" regex max 30 per_file 5 ctx 80",
                 "  /terminal smart cli.py",
                 "  /terminal history",
             ]

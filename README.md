@@ -119,12 +119,13 @@ python cli.py --status
 - `/resumir caminho`
 - `/ler caminho`
 - `/read path`
-- `/buscar termo`
-- `/grep termo`
+- `/buscar termo [regex] [max N] [per_file N] [ctx N]`
+- `/grep termo [regex] [max N] [per_file N] [ctx N]`
 - `/sum comando`
 - `/summary comando`
 - `/resumo comando`
 - `/terminal sum|read|search|smart ...`
+- `/terminal search termo [regex] [max N] [per_file N] [ctx N]`
 - `/terminal help`
 - `/terminal menu`
 - `/terminal history`
@@ -145,9 +146,10 @@ python cli.py --status
 - `smoke_test.py` validates startup without entering chat.
 - `/smart` and `/resumir` generate a compact heuristic summary for code files, inspired by RTK's `smart` command.
 - `/ler` and `/read` provide compact file reading with optional comment stripping, line windows, and line numbers.
-- `/buscar` and `/grep` search the Obsidian vault and group matches by file, inspired by RTK's compact grep output.
+- `/buscar` and `/grep` search the Obsidian vault and group matches by file, with options `regex`, `max`, `per_file`, and `ctx` for advanced control.
 - `/sum`, `/summary`, and `/resumo` run a command and print a compact heuristic summary of its output, inspired by RTK's `summary` command.
 - `/terminal` is a convenience wrapper that routes to summary, compact read, vault search, or code summary in one entry point.
 - `/terminal help` prints a short command menu with examples.
 - `/terminal menu` opens an interactive numeric menu for quick terminal-assistant actions.
 - `/terminal history` shows the most recent terminal-assistant actions persisted in `data/terminal_history.jsonl`.
+- `/terminal search` accepts advanced options like `regex`, `max`, `per_file`, and `ctx` (for snippet context size).
