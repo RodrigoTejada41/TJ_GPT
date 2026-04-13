@@ -23,6 +23,7 @@ Terminal assistant with:
 - `vector_store.py`
 - `code_summarizer.py`
 - `source_reader.py`
+- `vault_search.py`
 - `utils.py`
 - `config.json`
 - `requirements.txt`
@@ -117,6 +118,8 @@ python cli.py --status
 - `/resumir caminho`
 - `/ler caminho`
 - `/read path`
+- `/buscar termo`
+- `/grep termo`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -134,3 +137,4 @@ python cli.py --status
 - `smoke_test.py` validates startup without entering chat.
 - `/smart` and `/resumir` generate a compact heuristic summary for code files, inspired by RTK's `smart` command.
 - `/ler` and `/read` provide compact file reading with optional comment stripping, line windows, and line numbers.
+- `/buscar` and `/grep` search the Obsidian vault and group matches by file, inspired by RTK's compact grep output.

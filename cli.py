@@ -15,6 +15,7 @@ from embeddings import EmbeddingManager
 from obsidian_loader import ObsidianLoader
 from search import SearchEngine
 from source_reader import ReadOptions, SourceReader
+from vault_search import SearchOptions, VaultSearcher
 from utils import AppTimer, ensure_directory, log, normalize_text
 from vector_store import VectorStore
 
@@ -79,6 +80,7 @@ class AssistantApp:
         self.ai = LocalAssistant(self.config)
         self.summarizer = CodeSummarizer()
         self.reader = SourceReader()
+        self.vault_search = VaultSearcher(self.loader)
         self.documents = []
         self.chunks = []
         self.vault_file_count = 0
@@ -539,6 +541,19 @@ class AssistantApp:
                 print(self.reader.read_path(target, options))
             except Exception as exc:
                 log(f"Failed to read file: {exc}")
+            return
+        if command_name in {"/buscar", "/grep"}:
+            parts = command.split(maxsplit=1)
+            if len(parts) < 2:
+                log("Usage: /buscar termo")
+                return
+            query = parts[1].strip().strip('"')
+            try:
+                vault_path = Path(self.config["vault_path"]).expanduser()
+                result = self.vault_search.search(vault_path, query, SearchOptions())
+                print(result)
+            except Exception as exc:
+                log(f"Failed to search vault: {exc}")
             return
         if command_name == "/recarregar":
             self.reload_vault(reindex=False)
