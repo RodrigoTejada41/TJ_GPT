@@ -82,6 +82,14 @@ run.bat
 healthcheck.bat
 ```
 
+Safe update flow:
+
+```powershell
+.\update.ps1
+```
+
+The update script creates a backup branch and tag before pulling remote changes, so you can recover the exact pre-update state if something goes wrong.
+
 Diagnostics without chat:
 
 ```powershell

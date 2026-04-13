@@ -4,3 +4,4 @@ data/
 obsidian_vault/
 *.sqlite3
 *.pyc
+.python_path
