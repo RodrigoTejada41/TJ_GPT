@@ -571,21 +571,24 @@ class AssistantApp:
         if command_name in {"/terminal", "/term"}:
             args = self._split_command_args(command, command_name)
             if not args:
-                log("Usage: /terminal sum|read|search|smart ...")
+                print(self.format_terminal_help())
                 return
             subcommand = args[0].lower()
             payload = args[1:]
             try:
+                if subcommand in {"help", "ajuda", "?"}:
+                    print(self.format_terminal_help())
+                    return
                 if subcommand in {"sum", "summary", "resumo"}:
                     command_text = " ".join(payload).strip()
                     if not command_text:
-                        log("Usage: /terminal sum comando")
+                        print(self.format_terminal_help())
                         return
                     print(self.command_summarizer.format_summary(command_text))
                     return
                 if subcommand in {"read", "ler"}:
                     if not payload:
-                        log("Usage: /terminal read caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
+                        print(self.format_terminal_help())
                         return
                     options = ReadOptions()
                     target = Path(payload[0])
@@ -612,7 +615,7 @@ class AssistantApp:
                 if subcommand in {"search", "grep", "buscar"}:
                     query = " ".join(payload).strip()
                     if not query:
-                        log("Usage: /terminal search termo")
+                        print(self.format_terminal_help())
                         return
                     vault_path = Path(self.config["vault_path"]).expanduser()
                     result = self.vault_search.search(vault_path, query, SearchOptions())
@@ -620,14 +623,14 @@ class AssistantApp:
                     return
                 if subcommand in {"smart", "resumir"}:
                     if not payload:
-                        log("Usage: /terminal smart caminho-do-arquivo")
+                        print(self.format_terminal_help())
                         return
                     print(self.summarizer.format_summary(Path(payload[0])))
                     return
             except Exception as exc:
                 log(f"Terminal command failed: {exc}")
                 return
-            log("Usage: /terminal sum|read|search|smart ...")
+            print(self.format_terminal_help())
             return
         if command_name == "/recarregar":
             self.reload_vault(reindex=False)
@@ -687,6 +690,26 @@ class AssistantApp:
             if token:
                 tokens.append(token)
         return tokens
+
+    def format_terminal_help(self) -> str:
+        return "\n".join(
+            [
+                "Terminal assistant commands",
+                "",
+                "Usage:",
+                "  /terminal help",
+                "  /terminal sum <command>",
+                "  /terminal read <path> [raw|minimal|aggressive] [max_lines|tail N] [numbers]",
+                "  /terminal search <term>",
+                "  /terminal smart <path>",
+                "",
+                "Examples:",
+                "  /terminal sum echo hello world",
+                "  /terminal read \"README.md\" minimal 12 numbers",
+                "  /terminal search backup branch",
+                "  /terminal smart cli.py",
+            ]
+        )
 
 
 def main() -> None:
