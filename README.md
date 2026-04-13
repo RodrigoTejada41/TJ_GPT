@@ -90,6 +90,14 @@ Safe update flow:
 
 The update script creates a backup branch and tag before pulling remote changes, so you can recover the exact pre-update state if something goes wrong.
 
+Manual checkpoint:
+
+```powershell
+.\backup.ps1
+```
+
+Use this when you want to save the current state without pulling anything from the remote. If there are local changes, they are saved in `git stash` too.
+
 Diagnostics without chat:
 
 ```powershell
