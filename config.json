@@ -1,0 +1,16 @@
+{
+  "modo_llm": "ollama",
+  "modo_embedding": "ollama",
+  "modelo_llm": "llama3",
+  "modelo_embedding": "nomic-embed-text",
+  "vault_path": "E:/Projetos/CEREBRO_VIVO",
+  "top_k": 5,
+  "max_contexto": 3,
+  "similaridade_cache": 0.85,
+  "auto_reindex_on_start": true,
+  "timeout": 60,
+  "ollama_url": "http://localhost:11434",
+  "lmstudio_url": "http://localhost:1234",
+  "temperature": 0.2,
+  "max_context_chars": 2400
+}
