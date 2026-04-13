@@ -22,6 +22,7 @@ Terminal assistant with:
 - `obsidian_loader.py`
 - `vector_store.py`
 - `code_summarizer.py`
+- `command_summarizer.py`
 - `source_reader.py`
 - `vault_search.py`
 - `utils.py`
@@ -120,6 +121,9 @@ python cli.py --status
 - `/read path`
 - `/buscar termo`
 - `/grep termo`
+- `/sum comando`
+- `/summary comando`
+- `/resumo comando`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -138,3 +142,4 @@ python cli.py --status
 - `/smart` and `/resumir` generate a compact heuristic summary for code files, inspired by RTK's `smart` command.
 - `/ler` and `/read` provide compact file reading with optional comment stripping, line windows, and line numbers.
 - `/buscar` and `/grep` search the Obsidian vault and group matches by file, inspired by RTK's compact grep output.
+- `/sum`, `/summary`, and `/resumo` run a command and print a compact heuristic summary of its output, inspired by RTK's `summary` command.

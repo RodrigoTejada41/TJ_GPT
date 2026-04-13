@@ -11,6 +11,7 @@ import requests
 
 from ai import LocalAssistant
 from code_summarizer import CodeSummarizer
+from command_summarizer import CommandSummarizer
 from database import ChatDatabase
 from embeddings import EmbeddingManager
 from obsidian_loader import ObsidianLoader
@@ -80,6 +81,7 @@ class AssistantApp:
         self.search = SearchEngine(self.db, self.vector_store, self.embeddings, self.config)
         self.ai = LocalAssistant(self.config)
         self.summarizer = CodeSummarizer()
+        self.command_summarizer = CommandSummarizer()
         self.reader = SourceReader()
         self.vault_search = VaultSearcher(self.loader)
         self.documents = []
@@ -555,6 +557,16 @@ class AssistantApp:
                 print(result)
             except Exception as exc:
                 log(f"Failed to search vault: {exc}")
+            return
+        if command_name in {"/sum", "/summary", "/resumo"}:
+            command_text = command[len(command_name):].strip()
+            if not command_text:
+                log("Usage: /sum comando")
+                return
+            try:
+                print(self.command_summarizer.format_summary(command_text))
+            except Exception as exc:
+                log(f"Failed to summarize command: {exc}")
             return
         if command_name == "/recarregar":
             self.reload_vault(reindex=False)
