@@ -2,6 +2,7 @@
 __pycache__/
 data/
 obsidian_vault/
+rtk-master/
 *.sqlite3
 *.pyc
 .python_path

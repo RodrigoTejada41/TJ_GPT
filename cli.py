@@ -9,6 +9,7 @@ from pathlib import Path
 import requests
 
 from ai import LocalAssistant
+from code_summarizer import CodeSummarizer
 from database import ChatDatabase
 from embeddings import EmbeddingManager
 from obsidian_loader import ObsidianLoader
@@ -75,6 +76,7 @@ class AssistantApp:
         self.loader = ObsidianLoader(self.config)
         self.search = SearchEngine(self.db, self.vector_store, self.embeddings, self.config)
         self.ai = LocalAssistant(self.config)
+        self.summarizer = CodeSummarizer()
         self.documents = []
         self.chunks = []
         self.vault_file_count = 0
@@ -486,6 +488,17 @@ class AssistantApp:
                 f"LLM={self.config['modo_llm']} ({self.config['modelo_llm']}), "
                 f"Embeddings={self.config['modo_embedding']} ({self.config['modelo_embedding']})"
             )
+            return
+        if command_name in {"/smart", "/resumir"}:
+            parts = command.split(maxsplit=1)
+            if len(parts) < 2:
+                log("Usage: /smart caminho-do-arquivo")
+                return
+            target = Path(parts[1].strip().strip('"'))
+            try:
+                print(self.summarizer.format_summary(target))
+            except Exception as exc:
+                log(f"Failed to summarize file: {exc}")
             return
         if command_name == "/recarregar":
             self.reload_vault(reindex=False)

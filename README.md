@@ -21,6 +21,7 @@ Terminal assistant with:
 - `embeddings.py`
 - `obsidian_loader.py`
 - `vector_store.py`
+- `code_summarizer.py`
 - `utils.py`
 - `config.json`
 - `requirements.txt`
@@ -111,6 +112,8 @@ python cli.py --status
 - `/listar`
 - `/limpar`
 - `/modo`
+- `/smart caminho`
+- `/resumir caminho`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -126,3 +129,4 @@ python cli.py --status
 - `/reindexar` rebuilds the full index.
 - `auto_reindex_on_start` can rebuild the index automatically on startup.
 - `smoke_test.py` validates startup without entering chat.
+- `/smart` and `/resumir` generate a compact heuristic summary for code files, inspired by RTK's `smart` command.
