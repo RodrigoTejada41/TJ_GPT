@@ -512,34 +512,11 @@ class AssistantApp:
             if not args:
                 log("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
                 return
-            target = Path(args[0])
-            options = ReadOptions()
-            extra = args[1:]
-            idx = 0
-            while idx < len(extra):
-                token = extra[idx].lower()
-                if token in {"raw", "none", "minimal", "aggressive"}:
-                    options.level = token
-                elif token in {"tail", "last"} and idx + 1 < len(extra):
-                    try:
-                        options.tail_lines = int(extra[idx + 1])
-                        idx += 1
-                    except ValueError:
-                        log("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
-                        return
-                elif token in {"numbers", "-n", "line_numbers"}:
-                    options.line_numbers = True
-                else:
-                    try:
-                        value = int(token)
-                        if options.tail_lines is None:
-                            options.max_lines = value
-                        else:
-                            options.tail_lines = value
-                    except ValueError:
-                        log(f"Unknown option: {token}")
-                        return
-                idx += 1
+            try:
+                target, options = self._parse_read_args(args)
+            except ValueError as exc:
+                log(str(exc))
+                return
             try:
                 print(self.reader.read_path(target, options))
             except Exception as exc:
@@ -579,53 +556,10 @@ class AssistantApp:
                 if subcommand in {"help", "ajuda", "?"}:
                     print(self.format_terminal_help())
                     return
-                if subcommand in {"sum", "summary", "resumo"}:
-                    command_text = " ".join(payload).strip()
-                    if not command_text:
-                        print(self.format_terminal_help())
-                        return
-                    print(self.command_summarizer.format_summary(command_text))
+                if subcommand in {"menu", "interactive", "interativo"}:
+                    self.run_terminal_menu()
                     return
-                if subcommand in {"read", "ler"}:
-                    if not payload:
-                        print(self.format_terminal_help())
-                        return
-                    options = ReadOptions()
-                    target = Path(payload[0])
-                    extra = payload[1:]
-                    idx = 0
-                    while idx < len(extra):
-                        token = extra[idx].lower()
-                        if token in {"raw", "none", "minimal", "aggressive"}:
-                            options.level = token
-                        elif token in {"tail", "last"} and idx + 1 < len(extra):
-                            options.tail_lines = int(extra[idx + 1])
-                            idx += 1
-                        elif token in {"numbers", "-n", "line_numbers"}:
-                            options.line_numbers = True
-                        else:
-                            value = int(token)
-                            if options.tail_lines is None:
-                                options.max_lines = value
-                            else:
-                                options.tail_lines = value
-                        idx += 1
-                    print(self.reader.read_path(target, options))
-                    return
-                if subcommand in {"search", "grep", "buscar"}:
-                    query = " ".join(payload).strip()
-                    if not query:
-                        print(self.format_terminal_help())
-                        return
-                    vault_path = Path(self.config["vault_path"]).expanduser()
-                    result = self.vault_search.search(vault_path, query, SearchOptions())
-                    print(result)
-                    return
-                if subcommand in {"smart", "resumir"}:
-                    if not payload:
-                        print(self.format_terminal_help())
-                        return
-                    print(self.summarizer.format_summary(Path(payload[0])))
+                if self._run_terminal_subcommand(subcommand, payload):
                     return
             except Exception as exc:
                 log(f"Terminal command failed: {exc}")
@@ -684,12 +618,113 @@ class AssistantApp:
         raw_args = command[len(command_name):].strip()
         if not raw_args:
             return []
+        return self._split_quoted_args(raw_args)
+
+    def _split_quoted_args(self, raw_args: str) -> list[str]:
         tokens = []
         for match in re.finditer(r'"([^"]*)"|(\S+)', raw_args):
             token = match.group(1) if match.group(1) is not None else match.group(2)
             if token:
                 tokens.append(token)
         return tokens
+
+    def _parse_read_args(self, args: list[str]) -> tuple[Path, ReadOptions]:
+        if not args:
+            raise ValueError("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]")
+        target = Path(args[0])
+        options = ReadOptions()
+        extra = args[1:]
+        idx = 0
+        while idx < len(extra):
+            token = extra[idx].lower()
+            if token in {"raw", "none", "minimal", "aggressive"}:
+                options.level = token
+            elif token in {"tail", "last"} and idx + 1 < len(extra):
+                try:
+                    options.tail_lines = int(extra[idx + 1])
+                    idx += 1
+                except ValueError as exc:
+                    raise ValueError("Usage: /ler caminho [raw|minimal|aggressive] [max_lines|tail N] [numbers]") from exc
+            elif token in {"numbers", "-n", "line_numbers"}:
+                options.line_numbers = True
+            else:
+                try:
+                    value = int(token)
+                    if options.tail_lines is None:
+                        options.max_lines = value
+                    else:
+                        options.tail_lines = value
+                except ValueError as exc:
+                    raise ValueError(f"Unknown option: {token}") from exc
+            idx += 1
+        return target, options
+
+    def _run_terminal_subcommand(self, subcommand: str, payload: list[str]) -> bool:
+        if subcommand in {"sum", "summary", "resumo"}:
+            command_text = " ".join(payload).strip()
+            if not command_text:
+                print(self.format_terminal_help())
+                return True
+            print(self.command_summarizer.format_summary(command_text))
+            return True
+        if subcommand in {"read", "ler"}:
+            if not payload:
+                print(self.format_terminal_help())
+                return True
+            target, options = self._parse_read_args(payload)
+            print(self.reader.read_path(target, options))
+            return True
+        if subcommand in {"search", "grep", "buscar"}:
+            query = " ".join(payload).strip()
+            if not query:
+                print(self.format_terminal_help())
+                return True
+            vault_path = Path(self.config["vault_path"]).expanduser()
+            result = self.vault_search.search(vault_path, query, SearchOptions())
+            print(result)
+            return True
+        if subcommand in {"smart", "resumir"}:
+            if not payload:
+                print(self.format_terminal_help())
+                return True
+            print(self.summarizer.format_summary(Path(payload[0])))
+            return True
+        return False
+
+    def run_terminal_menu(self) -> None:
+        while True:
+            print(self.format_terminal_menu())
+            try:
+                choice = input("terminal> ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return
+            if choice in {"0", "sair", "exit", "voltar", "back"}:
+                return
+            if choice in {"h", "help", "ajuda", "?"}:
+                print(self.format_terminal_help())
+                continue
+            if choice in {"1", "sum"}:
+                raw = input("sum> ").strip()
+                if raw:
+                    self._run_terminal_subcommand("sum", self._split_quoted_args(raw))
+                continue
+            if choice in {"2", "read"}:
+                raw = input("read> ").strip()
+                if raw:
+                    self._run_terminal_subcommand("read", self._split_quoted_args(raw))
+                continue
+            if choice in {"3", "search"}:
+                raw = input("search> ").strip()
+                if raw:
+                    self._run_terminal_subcommand("search", self._split_quoted_args(raw))
+                continue
+            if choice in {"4", "smart"}:
+                raw = input("smart> ").strip()
+                if raw:
+                    self._run_terminal_subcommand("smart", self._split_quoted_args(raw))
+                continue
+            print("Invalid option. Type h for help or 0 to exit.")
 
     def format_terminal_help(self) -> str:
         return "\n".join(
@@ -698,6 +733,7 @@ class AssistantApp:
                 "",
                 "Usage:",
                 "  /terminal help",
+                "  /terminal menu",
                 "  /terminal sum <command>",
                 "  /terminal read <path> [raw|minimal|aggressive] [max_lines|tail N] [numbers]",
                 "  /terminal search <term>",
@@ -708,6 +744,20 @@ class AssistantApp:
                 "  /terminal read \"README.md\" minimal 12 numbers",
                 "  /terminal search backup branch",
                 "  /terminal smart cli.py",
+            ]
+        )
+
+    def format_terminal_menu(self) -> str:
+        return "\n".join(
+            [
+                "",
+                "Terminal assistant menu",
+                "1) sum     - summarize command output",
+                "2) read    - compact file reader",
+                "3) search  - vault text search",
+                "4) smart   - code file summary",
+                "h) help",
+                "0) exit",
             ]
         )
 

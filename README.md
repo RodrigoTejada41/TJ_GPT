@@ -126,6 +126,7 @@ python cli.py --status
 - `/resumo comando`
 - `/terminal sum|read|search|smart ...`
 - `/terminal help`
+- `/terminal menu`
 - `/recarregar`
 - `/reindexar`
 - `/status`
@@ -147,3 +148,4 @@ python cli.py --status
 - `/sum`, `/summary`, and `/resumo` run a command and print a compact heuristic summary of its output, inspired by RTK's `summary` command.
 - `/terminal` is a convenience wrapper that routes to summary, compact read, vault search, or code summary in one entry point.
 - `/terminal help` prints a short command menu with examples.
+- `/terminal menu` opens an interactive numeric menu for quick terminal-assistant actions.
